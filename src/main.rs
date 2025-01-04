@@ -21,57 +21,83 @@ impl Default for PlaygroundApp {
 
 impl eframe::App for PlaygroundApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Set dark theme
-        ctx.set_visuals(egui::Visuals::dark());
+        // Set white background for the whole app
+        ctx.set_visuals(egui::Visuals::light());
         
-        // Configure the dark theme with jet black background
+        // Configure the style for the side panel
         let mut style = (*ctx.style()).clone();
-        style.visuals.panel_fill = egui::Color32::from_rgb(0, 0, 0);
-        style.visuals.window_fill = egui::Color32::from_rgb(0, 0, 0);
-        style.visuals.extreme_bg_color = egui::Color32::from_rgb(0, 0, 0);
+        style.visuals.panel_fill = egui::Color32::from_rgb(240, 240, 240);
         ctx.set_style(style);
 
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            ui.heading(
-                egui::RichText::new("Playground")
-                    .strong()
-                    .color(egui::Color32::WHITE)
-                    .family(egui::FontFamily::Proportional)
-            );
-        });
-
         egui::SidePanel::left("friends_panel")
-            .default_width(200.0)
+            .default_width(400.0)
+            .resizable(false)
+            .show_separator_line(false)
+            .frame(egui::Frame::none()
+                .fill(egui::Color32::WHITE))
             .show(ctx, |ui| {
-                ui.heading("Friends");
-                ui.separator();
-                for friend in &self.friends {
-                    ui.horizontal(|ui| {
-                        // Create circular frame for profile picture
-                        let size = 32.0;
-                        let (rect, _) = ui.allocate_exact_size(egui::vec2(size, size), egui::Sense::hover());
-                        egui::Frame::none()
-                            .rounding(egui::Rounding::same(4.0))
-                            .fill(egui::Color32::from_gray(64))
-                            .show(ui, |ui| {
-                                ui.set_min_size(egui::vec2(size, size));
-                                ui.set_max_size(egui::vec2(size, size));
-                                ui.centered_and_justified(|ui| {
-                                    ui.label("👤");
-                                });
+                ui.add_space(16.0);  // Top margin
+                
+                // Get available rect and shrink it for margins
+                let mut panel_rect = ui.available_rect_before_wrap();
+                panel_rect.min.x += 16.0;  // Left margin
+                panel_rect.max.x -= 16.0;  // Right margin
+                panel_rect.max.y -= 16.0;  // Bottom margin
+                
+                // Draw the black rounded rectangle background
+                ui.painter().rect_filled(
+                    panel_rect,
+                    egui::Rounding::same(12.0),
+                    egui::Color32::BLACK,
+                );
+
+                // Content container with padding
+                egui::Frame::none()
+                    .inner_margin(egui::style::Margin {
+                        left: 32.0,
+                        right: 96.0,  // Increased right padding
+                        top: 16.0,
+                        bottom: 16.0,
+                    })
+                    .show(ui, |ui| {
+                        ui.spacing_mut().item_spacing.y = 8.0;
+                        ui.heading(
+                            egui::RichText::new("Friends")
+                                .color(egui::Color32::WHITE)
+                        );
+                        ui.add_space(8.0);
+                        
+                        for friend in &self.friends {
+                            ui.horizontal(|ui| {
+                                // Profile picture
+                                let size = 32.0;
+                                egui::Frame::none()
+                                    .rounding(egui::Rounding::same(16.0))
+                                    .fill(egui::Color32::from_gray(64))
+                                    .show(ui, |ui| {
+                                        ui.set_min_size(egui::vec2(size, size));
+                                        ui.set_max_size(egui::vec2(size, size));
+                                        ui.centered_and_justified(|ui| {
+                                            ui.label("👤");
+                                        });
+                                    });
+                                ui.add_space(8.0);
+                                ui.label(
+                                    egui::RichText::new(friend)
+                                        .color(egui::Color32::WHITE)
+                                );
                             });
-                        //ui.add_space(8.0);
-                        ui.label(friend);
+                            ui.add_space(4.0);
+                        }
                     });
-                    //ui.add_space(4.0);
-                }
             });
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Video Grid");
+            ui.add_space(16.0);
             egui::ScrollArea::both().show(ui, |ui| {
                 egui::Grid::new("video_grid")
-                    .spacing([10.0, 10.0])
+                    .spacing([16.0, 16.0])
                     .min_col_width(240.0)
                     .max_col_width(240.0)
                     .show(ui, |ui| {
@@ -80,19 +106,47 @@ impl eframe::App for PlaygroundApp {
                                 ui.end_row();
                             }
                             
-                            egui::Frame::dark_canvas(ui.style())
-                                .inner_margin(8.0)
+                            let response = egui::Frame::none()
+                                .rounding(egui::Rounding::same(12.0))
+                                .fill(egui::Color32::from_gray(20))
+                                .shadow(egui::epaint::Shadow {
+                                    extrusion: 2.0,
+                                    color: egui::Color32::from_black_alpha(100),
+                                })
+                                .inner_margin(egui::style::Margin::same(12.0))
                                 .show(ui, |ui| {
                                     ui.set_min_size(egui::vec2(240.0, 180.0));
-                                    ui.set_max_size(egui::vec2(240.0, 180.0));
                                     ui.vertical_centered(|ui| {
-                                        ui.add_sized(
-                                            [220.0, 140.0],
-                                            egui::Label::new("📹")
+                                        // Camera view with rounded corners
+                                        egui::Frame::none()
+                                            .rounding(egui::Rounding::same(8.0))
+                                            .fill(egui::Color32::from_gray(30))
+                                            .show(ui, |ui| {
+                                                ui.add_sized(
+                                                    [220.0, 140.0],
+                                                    egui::Label::new(
+                                                        egui::RichText::new("📹")
+                                                            .size(32.0)
+                                                    )
+                                                );
+                                            });
+                                        ui.add_space(8.0);
+                                        ui.label(
+                                            egui::RichText::new(participant)
+                                                .size(16.0)
                                         );
-                                        ui.label(participant);
                                     });
-                                });
+                                }).response;
+
+                            // Store rect before moving response
+                            let rect = response.rect;
+                            response.on_hover_ui(|ui| {
+                                ui.painter().rect_filled(
+                                    rect,  // Use stored rect instead of response.rect
+                                    egui::Rounding::same(12.0),
+                                    egui::Color32::from_gray(25),
+                                );
+                            });
                         }
                     });
             });
@@ -104,7 +158,6 @@ fn main() -> eframe::Result<()> {
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1200.0, 800.0])
-            .with_icon(load_icon())
             .with_title("Playground"),
         ..Default::default()
     };
@@ -114,52 +167,4 @@ fn main() -> eframe::Result<()> {
         native_options,
         Box::new(|_cc| Box::new(PlaygroundApp::default())),
     )
-}
-
-fn load_icon() -> egui::IconData {
-    let (icon_rgba, icon_width, icon_height) = {
-        let icon = include_bytes!("../assets/logo.png");
-        let mut image = image::load_from_memory(icon)
-            .expect("Failed to load icon")
-            .into_rgba8();
-        
-        // macOS-style rounded corners
-        for y in 0..image.height() {
-            for x in 0..image.width() {
-                let px = x as f32;
-                let py = y as f32;
-                let width = image.width() as f32;
-                let height = image.height() as f32;
-                
-                // Convert to coordinate system with origin at center
-                let dx = (px - width / 2.0) / (width / 2.0);
-                let dy = (py - height / 2.0) / (height / 2.0);
-                
-                // macOS-style squircle formula (n=5 for similar curvature to macOS)
-                let n = 5.0;
-                let radius = (dx.abs().powf(n) + dy.abs().powf(n)).powf(1.0/n);
-                
-                if radius > 1.0 {
-                    // Outside the squircle, make transparent
-                    let pixel = image.get_pixel_mut(x, y);
-                    pixel[3] = 0;
-                } else if radius > 0.95 {  // Adjust this value to control edge softness
-                    // Add anti-aliasing at the edges
-                    let alpha = ((1.0 - radius) / 0.05 * 255.0) as u8;
-                    let pixel = image.get_pixel_mut(x, y);
-                    pixel[3] = alpha.min(pixel[3]);
-                }
-            }
-        }
-        
-        let (width, height) = image.dimensions();
-        let rgba = image.into_raw();
-        (rgba, width, height)
-    };
-
-    egui::IconData {
-        rgba: icon_rgba,
-        width: icon_width,
-        height: icon_height,
-    }
 }
