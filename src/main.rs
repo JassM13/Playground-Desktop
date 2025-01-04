@@ -32,7 +32,12 @@ impl eframe::App for PlaygroundApp {
         ctx.set_style(style);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            ui.heading("Playground");
+            ui.heading(
+                egui::RichText::new("Playground")
+                    .strong()
+                    .color(egui::Color32::WHITE)
+                    .family(egui::FontFamily::Proportional)
+            );
         });
 
         egui::SidePanel::left("friends_panel")
@@ -112,12 +117,41 @@ fn main() -> eframe::Result<()> {
 }
 
 fn load_icon() -> egui::IconData {
-    // Load icon from PNG bytes
     let (icon_rgba, icon_width, icon_height) = {
         let icon = include_bytes!("../assets/logo.png");
-        let image = image::load_from_memory(icon)
+        let mut image = image::load_from_memory(icon)
             .expect("Failed to load icon")
             .into_rgba8();
+        
+        // macOS-style rounded corners
+        for y in 0..image.height() {
+            for x in 0..image.width() {
+                let px = x as f32;
+                let py = y as f32;
+                let width = image.width() as f32;
+                let height = image.height() as f32;
+                
+                // Convert to coordinate system with origin at center
+                let dx = (px - width / 2.0) / (width / 2.0);
+                let dy = (py - height / 2.0) / (height / 2.0);
+                
+                // macOS-style squircle formula (n=5 for similar curvature to macOS)
+                let n = 5.0;
+                let radius = (dx.abs().powf(n) + dy.abs().powf(n)).powf(1.0/n);
+                
+                if radius > 1.0 {
+                    // Outside the squircle, make transparent
+                    let pixel = image.get_pixel_mut(x, y);
+                    pixel[3] = 0;
+                } else if radius > 0.95 {  // Adjust this value to control edge softness
+                    // Add anti-aliasing at the edges
+                    let alpha = ((1.0 - radius) / 0.05 * 255.0) as u8;
+                    let pixel = image.get_pixel_mut(x, y);
+                    pixel[3] = alpha.min(pixel[3]);
+                }
+            }
+        }
+        
         let (width, height) = image.dimensions();
         let rgba = image.into_raw();
         (rgba, width, height)
